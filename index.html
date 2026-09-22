@@ -523,21 +523,24 @@ ago-26,$3.569.217.870,$4.257.009.681,$2.595.958.203,$2.806.870.905,$4.364.388.33
             const orangeColor = '#F59E0B'; // Proyección
             const blueColor = '#0F2C59';   // PTTO
             const greenColor = '#10B981';  // MB
-
-            const categories = data.map(d => d.mes);
             
-            // Preparar serie de Columnas (Ventas Real) con colores dinámicos
-            const ventasData = data.map(d => {
-                return {
-                    x: d.mes,
-                    y: d.ventasReal,
-                    fillColor: d.isProjection ? orangeColor : yellowColor,
-                    strokeColor: isDark ? '#1F2937' : '#fff'
-                };
-            });
+            // CORRECCIÓN: Para evitar que ApexCharts se quede en blanco en gráficos mixtos,
+            // todas las series deben compartir la misma estructura de objeto {x: categoría, y: valor}
+            const ventasData = data.map(d => ({
+                x: d.mes,
+                y: d.ventasReal,
+                fillColor: d.isProjection ? orangeColor : yellowColor
+            }));
 
-            const pttoData = data.map(d => d.pttoPlan);
-            const mbData = data.map(d => Number((d.mbReal * 100).toFixed(2)));
+            const pttoData = data.map(d => ({
+                x: d.mes,
+                y: d.pttoPlan
+            }));
+
+            const mbData = data.map(d => ({
+                x: d.mes,
+                y: Number((d.mbReal * 100).toFixed(2))
+            }));
 
             // Preparar Anotaciones para los picos (Comentarios resumidos)
             const annotationsPoints = [];
@@ -594,7 +597,7 @@ ago-26,$3.569.217.870,$4.257.009.681,$2.595.958.203,$2.806.870.905,$4.364.388.33
                     }
                 ],
                 chart: {
-                    height: '100%',
+                    height: 450, // Altura fija para evitar colapsos
                     type: 'line',
                     toolbar: { show: false },
                     fontFamily: 'Inter, sans-serif',
@@ -632,7 +635,7 @@ ago-26,$3.569.217.870,$4.257.009.681,$2.595.958.203,$2.806.870.905,$4.364.388.33
                     }
                 },
                 xaxis: {
-                    categories: categories,
+                    type: 'category', // CORRECCIÓN: Se usa tipo categoría en lugar de pasar un array suelto
                     axisBorder: { show: false },
                     axisTicks: { show: false },
                     labels: { style: { colors: textColor, fontWeight: 500 } }
@@ -688,10 +691,12 @@ ago-26,$3.569.217.870,$4.257.009.681,$2.595.958.203,$2.806.870.905,$4.364.388.33
                         { formatter: (val) => val.toFixed(2) + '%' }
                     ],
                     custom: function({series, seriesIndex, dataPointIndex, w}) {
+                        // CORRECCIÓN: Leemos los valores directamente del origen de datos (row) 
+                        // para evitar desajustes del tooltip con los objetos {x,y}
                         const row = data[dataPointIndex];
-                        const valVentas = series[0][dataPointIndex];
-                        const valPtto = series[1][dataPointIndex];
-                        const valMb = series[2][dataPointIndex];
+                        const valVentas = row.ventasReal;
+                        const valPtto = row.pttoPlan;
+                        const valMb = Number((row.mbReal * 100).toFixed(2));
                         const isPositivePeak = valVentas > valPtto;
 
                         let html = `
