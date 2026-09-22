@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Financiero MARC</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ApexCharts for Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Phosphor Icons for modern, clean iconography -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            blue: '#0F2C59',     /* Azul corporativo oscuro */
+                            yellow: '#FACC15',   /* Amarillo corporativo histórico */
+                            orange: '#F59E0B',   /* Naranja/Ámbar para proyecciones */
+                            green: '#10B981',    /* Verde para MB/resultados positivos */
+                            gray: '#E5E7EB',     /* Gris muy claro */
+                            darkBg: '#111827',
+                            darkCard: '#1F2937'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Glassmorphism Classes */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .dark .glass-card {
+            background: rgba(31, 41, 55, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Custom Scrollbar for a modern look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        /* ApexCharts Tooltip styling */
+        .apexcharts-tooltip {
+            background: #ffffff !important;
+            border: 1px solid #E5E7EB !important;
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.1) !important;
+            color: #111827 !important;
+            white-space: normal !important;
+            border-radius: 0.5rem !important;
+        }
+        .dark .apexcharts-tooltip {
+            background: #1F2937 !important;
+            border: 1px solid #374151 !important;
+            color: #F3F4F6 !important;
+        }
+        .apexcharts-tooltip-title {
+            background: transparent !important;
+            border-bottom: 1px solid #E5E7EB !important;
+            font-weight: 700 !important;
+            padding: 0.75rem 1rem !important;
+        }
+        .dark .apexcharts-tooltip-title {
+            border-bottom: 1px solid #374151 !important;
+        }
+        
+        /* Filter Button Active State */
+        .filter-btn.active {
+            background-color: #0F2C59;
+            color: white;
+            border-color: #0F2C59;
+        }
+        .dark .filter-btn.active {
+            background-color: #FACC15;
+            color: #0F2C59;
+            border-color: #FACC15;
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] dark:bg-brand-darkBg text-gray-800 dark:text-gray-100 transition-colors duration-300 antialiased min-h-screen flex flex-col md:flex-row">
+
+    <!-- Sidebar -->
+    <aside class="w-full md:w-72 glass-card m-4 md:mr-0 flex flex-col justify-between sticky top-4 h-auto md:h-[calc(100vh-2rem)] z-20">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 rounded-lg bg-brand-blue flex items-center justify-center shadow-lg">
+                    <i class="ph-fill ph-chart-line-up text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-brand-blue dark:text-white leading-tight">MARC Data</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Financial Intelligence</p>
+                </div>
+            </div>
+
+            <nav class="space-y-2">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 bg-brand-blue/10 dark:bg-brand-blue/20 text-brand-blue dark:text-brand-yellow rounded-lg font-medium transition-colors">
+                    <i class="ph ph-squares-four text-lg"></i>
+                    Dashboard
+                </a>
+            </nav>
+        </div>
+
+        <div class="p-6 border-t border-gray-200 dark:border-gray-700/50 space-y-4">
+            <!-- Theme Toggle -->
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Modo Oscuro</span>
+                <button id="themeToggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 dark:bg-brand-blue transition-colors focus:outline-none">
+                    <span id="themeToggleKnob" class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1 dark:translate-x-6"></span>
+                </button>
+            </div>
+            
+            <!-- Refresh Button -->
+            <button id="refreshDataBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-blue text-white rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 transition-all shadow-md font-medium">
+                <i class="ph ph-arrows-clockwise text-lg"></i>
+                Refrescar Datos
+            </button>
+            <div id="lastUpdateText" class="text-center text-xs text-gray-400 mt-2">
+                Actualizado: --
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-8 overflow-x-hidden flex flex-col">
+        
+        <!-- Header -->
+        <header class="mb-8 relative shrink-0">
+            <!-- Detalles geométricos corporativos -->
+            <div class="absolute -top-4 -right-4 w-24 h-24 bg-brand-yellow opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute top-8 right-12 w-16 h-16 bg-brand-blue opacity-10 rounded-full blur-xl pointer-events-none"></div>
+            
+            <h2 class="text-3xl font-bold text-brand-blue dark:text-white">Balance de Provisión y Facturación</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium text-sm">Análisis de Ingresos, Costes y Margen Bruto - 2026</p>
+        </header>
+
+        <!-- Filtro de Meses -->
+        <div class="glass-card p-5 mb-6 shrink-0">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h3 class="text-sm font-semibold text-brand-blue dark:text-brand-yellow uppercase tracking-wider">
+                    <i class="ph ph-funnel mr-1"></i> Filtrar Meses
+                </h3>
+                <div id="monthFiltersContainer" class="flex flex-wrap gap-2">
+                    <!-- Los botones se generarán por JS -->
+                    <span class="text-sm text-gray-400 italic">Cargando filtros...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 shrink-0">
+            <!-- KPI 1: Ventas Netas Real -->
+            <div class="glass-card p-6 border-l-4 border-l-brand-yellow relative overflow-hidden">
+                <h3 class="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider mb-1">Ventas Real (Filtrado)</h3>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white truncate" id="kpi-ventas-real">$0</div>
+                <div class="mt-2 text-sm flex items-center gap-1" id="kpi-ventas-var-container">
+                    <i class="ph-bold ph-minus text-gray-400"></i>
+                    <span class="text-gray-500 font-medium" id="kpi-ventas-var">0% vs Plan</span>
+                </div>
+                <i class="ph-duotone ph-currency-dollar absolute right-4 top-4 text-3xl text-gray-200 dark:text-gray-700"></i>
+            </div>
+
+            <!-- KPI 2: PTTO Plan -->
+            <div class="glass-card p-6 border-l-4 border-l-brand-blue relative overflow-hidden">
+                <h3 class="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider mb-1">Presupuesto Plan (PTTO)</h3>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white truncate" id="kpi-ptto-plan">$0</div>
+                <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Meta del periodo</div>
+                <i class="ph-duotone ph-target absolute right-4 top-4 text-3xl text-gray-200 dark:text-gray-700"></i>
+            </div>
+
+            <!-- KPI 3: MB Real -->
+            <div class="glass-card p-6 border-l-4 border-l-brand-green relative overflow-hidden">
+                <h3 class="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider mb-1">Margen Bruto (Real)</h3>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white truncate" id="kpi-mb-real">0%</div>
+                <div class="mt-2 text-sm flex items-center gap-1">
+                    <span class="text-gray-500 dark:text-gray-400" id="kpi-mb-dif">Dif: 0% vs Plan</span>
+                </div>
+                <i class="ph-duotone ph-chart-pie absolute right-4 top-4 text-3xl text-gray-200 dark:text-gray-700"></i>
+            </div>
+
+            <!-- KPI 4: Variación Absoluta -->
+            <div class="glass-card p-6 relative overflow-hidden">
+                <h3 class="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider mb-1">Variación Ingresos</h3>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white truncate" id="kpi-variacion">$0</div>
+                <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Diferencia neta vs PTTO</div>
+                <i class="ph-duotone ph-scales absolute right-4 top-4 text-3xl text-gray-200 dark:text-gray-700"></i>
+            </div>
+        </div>
+
+        <!-- Unified Main Chart -->
+        <div class="glass-card p-6 flex-1 flex flex-col relative">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-brand-blue dark:text-white">Panorama General: Ingresos, Presupuesto y Margen Bruto</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Las columnas combinan histórico y proyección. La línea azul es la meta (PTTO) y la verde indica el Margen Bruto (Eje derecho).</p>
+                </div>
+                
+                <!-- Leyenda Personalizada para Proyección -->
+                <div class="flex items-center gap-2 bg-brand-orange/10 border border-brand-orange/20 px-3 py-1.5 rounded-lg">
+                    <div class="w-3 h-3 rounded-sm bg-brand-orange"></div>
+                    <span class="text-xs font-medium text-brand-orange dark:text-orange-400">Últimos 3 meses (Proyección)</span>
+                </div>
+            </div>
+            
+            <div id="chart-main" class="w-full flex-1 min-h-[400px]"></div>
+            
+            <!-- Loading indicator -->
+            <div id="loading-tendencia" class="w-full h-full flex items-center justify-center absolute inset-0 bg-white/60 dark:bg-gray-900/60 rounded-xl hidden z-10 backdrop-blur-sm">
+                <i class="ph ph-spinner animate-spin text-4xl text-brand-blue"></i>
+            </div>
+        </div>
+        
+    </main>
+
+    <script>
+        // --- 1. THEME MANAGEMENT ---
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const themeToggleKnob = document.getElementById('themeToggleKnob');
+        const htmlElement = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+            themeToggleKnob.classList.add('translate-x-6');
+            themeToggleKnob.classList.remove('translate-x-1');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            const isDark = htmlElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            if (isDark) {
+                themeToggleKnob.classList.add('translate-x-6');
+                themeToggleKnob.classList.remove('translate-x-1');
+            } else {
+                themeToggleKnob.classList.remove('translate-x-6');
+                themeToggleKnob.classList.add('translate-x-1');
+            }
+            
+            if(window.appData) updateDashboard(); // Re-render with new theme
+        });
+
+        // --- 2. GLOBAL STATE ---
+        window.appData = []; // Store original full data
+        window.selectedMonths = new Set(); // Store active months
+        let mainChart = null; // ApexChart instance
+
+        // --- 3. UTILITIES & PARSING ---
+        const formatCurrency = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val);
+        const formatPercent = (val) => new Intl.NumberFormat('es-CO', { style: 'percent', minimumFractionDigits: 2 }).format(val);
+
+        function parseCurrencyFormat(val) {
+            if (!val || typeof val !== 'string') return 0;
+            let cleanVal = val.replace(/\$|\s|"|'/g, '');
+            if (cleanVal === '' || cleanVal === '-') return 0;
+
+            if (cleanVal.includes('%')) {
+                cleanVal = cleanVal.replace('%', '');
+                return parseFloat(cleanVal.replace(',', '.')) / 100;
+            }
+
+            let isNegative = false;
+            if (cleanVal.includes('-')) {
+                isNegative = true;
+                cleanVal = cleanVal.replace('-', '');
+            }
+
+            let dots = (cleanVal.match(/\./g) || []).length;
+            let commas = (cleanVal.match(/,/g) || []).length;
+
+            let parsedNum = 0;
+            if (dots > 0 && commas === 1) {
+                parsedNum = parseFloat(cleanVal.replace(/\./g, '').replace(',', '.')); 
+            } else if (commas > 0 && dots === 1) {
+                parsedNum = parseFloat(cleanVal.replace(/,/g, '')); 
+            } else if (dots > 1 && commas === 0) {
+                parsedNum = parseFloat(cleanVal.replace(/\./g, '')); 
+            } else if (commas > 1 && dots === 0) {
+                parsedNum = parseFloat(cleanVal.replace(/,/g, '')); 
+            } else if (dots === 1 && commas === 0) {
+                let parts = cleanVal.split('.');
+                if (parts[1].length === 3) parsedNum = parseFloat(cleanVal.replace('.', '')); 
+                else parsedNum = parseFloat(cleanVal); 
+            } else if (commas === 1 && dots === 0) {
+                let parts = cleanVal.split(',');
+                if (parts[1].length === 3) parsedNum = parseFloat(cleanVal.replace(',', '')); 
+                else parsedNum = parseFloat(cleanVal.replace(',', '.')); 
+            } else {
+                parsedNum = parseFloat(cleanVal);
+            }
+            return isNegative ? -Math.abs(parsedNum) : parsedNum;
+        }
+
+        function parseCSVText(csvText) {
+            const lines = csvText.trim().split('\n');
+            if(lines.length < 2) return [];
+
+            const header = lines[0];
+            const delimiter = header.includes('\t') ? '\t' : ',';
+            
+            function parseRow(rowText) {
+                if (delimiter === '\t') return rowText.split('\t');
+                let result = [];
+                let cell = '';
+                let inQuotes = false;
+                for (let i = 0; i < rowText.length; i++) {
+                    const char = rowText[i];
+                    if (char === '"' && rowText[i+1] === '"') {
+                        cell += '"'; i++; 
+                    } else if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === delimiter && !inQuotes) {
+                        result.push(cell); cell = '';
+                    } else {
+                        cell += char;
+                    }
+                }
+                result.push(cell);
+                return result.map(c => c.trim().replace(/^"|"$/g, ''));
+            }
+
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '' || lines[i].startsWith('\t')) continue; 
+                
+                const cols = parseRow(lines[i]);
+                if (cols.length < 3) continue;
+
+                const mes = cols[0].trim();
+                if(mes === '' || mes.toLowerCase().includes('total')) continue;
+
+                data.push({
+                    mes: mes,
+                    pttoPlan: parseCurrencyFormat(cols[1]),
+                    ventasReal: parseCurrencyFormat(cols[2]),
+                    mbPlan: parseCurrencyFormat(cols[7]),
+                    mbReal: parseCurrencyFormat(cols[8]),
+                    comentarios: cols[10] ? cols[10] : ''
+                });
+            }
+            return data;
+        }
+
+        const FALLBACK_CSV = `MES,PTTO Ingreso Plan,Ventas Netas Real,Costes ventas P,Costes ventas R,Valor facturado,Variacion,PLAN,REAL,DIF MB,COMENTARIOS
+ene-26,$3.491.343.491,$3.535.166.647,$2.518.000.000,$2.361.658.047,$3.576.167.008,$43.823.156,27.88%,33.20%,5.32%,"Aumento del perfil de disponibilidad debido a la exclusión de 660 horas down que quedaron por fuera de la Operación (FO) bajo el concepto de Stand By durante el cambio de Corona H138."
+feb-26,$3.213.551.830,$3.652.551.758,$2.514.240.131,$2.591.688.485,$4.167.253.259,$438.999.928,21.76%,29.04%,7.28%,"INGRESO ADICIONAL DE BONIFICACIÓN CAUSADA EN EL AÑO 2025 ($692,843,305)"
+mar-26,$3.600.929.601,$4.221.988.234,$2.487.026.247,$2.482.296.668,$3.759.206.947,$621.058.633,30.93%,41.21%,10.27%,"Sobre disponibilidad, por encima de lo presupuestado debido al No ingreso de la H150 a su Parada Anual."
+abr-26,$3.575.213.187,$3.508.770.064,$2.621.062.725,$2.606.545.890,$3.656.681.408,-$66.443.123,26.69%,25.71%,-0.97%,"Impacto sobre el BUDGET del mes debido al ingreso de H150 a su Parada Anual."
+may-26,$3.540.316.038,$3.787.334.229,$2.534.436.009,$2.511.264.189,$3.726.612.531,$247.018.191,28.41%,33.69%,5.28%,"Aumento del perfil de disponibilidad debido a la exclusión de 338 horas down."
+jun-26,$3.454.400.424,$3.635.280.186,$2.505.081.913,$2.498.446.812,$3.493.363.864,$180.879.762,27.48%,31.27%,3.79%,"Se cargaron 241 horas adicionales al plan de los equipos H137, H146"
+jul-26,$3.605.746.573,$3.793.393.864,$2.586.074.241,$2.509.171.982,$3.892.452.499,$187.647.291,28.28%,33.85%,5.58%,"Facturación con Tarifa de 19 Palas"
+ago-26,$3.569.217.870,$4.257.009.681,$2.595.958.203,$2.806.870.905,$4.364.388.333,$687.791.811,27.27%,34.06%,6.80%,"INGRESO ADICIONAL DE BONIFICACIÓN CAUSADA EN EL PRIMER SEMESTRE DEL 2026."`;
+
+        async function loadData() {
+            const loadingOverlay = document.getElementById('loading-tendencia');
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                const sheetId = '1QXfkPl43bffEq_oZ8aDCI7rKG9tdJsGWdka8RPecydw';
+                // Usando el endpoint de exportación de Google estándar
+                const fetchUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&sheet=Margen%20Marc`;
+                
+                console.log("Intentando descargar datos desde Google Sheets...");
+                const response = await fetch(fetchUrl);
+                
+                if (!response.ok) throw new Error(`Google respondió con código de error: ${response.status}`);
+                
+                const csvText = await response.text();
+                
+                if(csvText.trim().toLowerCase().startsWith('<!doctype html>')) {
+                    throw new Error('Bloqueo de acceso. Asegúrate de que el Sheet tenga "Acceso general: Cualquier persona con el enlace".');
+                }
+                
+                console.log("Datos obtenidos exitosamente de Google Sheets.");
+                return parseCSVText(csvText);
+
+            } catch (error) {
+                console.error("Fallo la conexión con Sheets:", error.message);
+                console.warn("Utilizando datos de respaldo internos para que el Dashboard siga funcionando.");
+                return parseCSVText(FALLBACK_CSV);
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        // --- 4. UI FILTERS GENERATION ---
+        function generateMonthFilters(data) {
+            const container = document.getElementById('monthFiltersContainer');
+            container.innerHTML = ''; // Clear
+            
+            // Si es la primera vez, seleccionar todos
+            if (window.selectedMonths.size === 0 && data.length > 0) {
+                data.forEach(d => window.selectedMonths.add(d.mes));
+            }
+
+            data.forEach(d => {
+                const btn = document.createElement('button');
+                btn.innerText = d.mes.split('-')[0]; // Mostrar solo 'ene', 'feb', etc. para que sea corto
+                btn.className = `filter-btn px-4 py-1.5 text-xs font-semibold rounded-full border transition-all duration-200 capitalize shadow-sm 
+                                ${window.selectedMonths.has(d.mes) 
+                                    ? 'active bg-brand-blue border-brand-blue text-white dark:bg-brand-yellow dark:border-brand-yellow dark:text-brand-blue' 
+                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700'}`;
+                
+                btn.onclick = () => {
+                    // Toggle Logic
+                    if (window.selectedMonths.has(d.mes)) {
+                        // Impedir deseleccionar todo (dejar al menos 1)
+                        if (window.selectedMonths.size > 1) {
+                            window.selectedMonths.delete(d.mes);
+                        }
+                    } else {
+                        window.selectedMonths.add(d.mes);
+                    }
+                    generateMonthFilters(window.appData); // Re-render buttons
+                    updateDashboard(); // Update charts and kpis
+                };
+                container.appendChild(btn);
+            });
+            
+            // Botón extra "Todos"
+            const btnAll = document.createElement('button');
+            btnAll.innerHTML = '<i class="ph-bold ph-check-all mr-1"></i> Todos';
+            btnAll.className = `px-4 py-1.5 text-xs font-bold rounded-full border bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-200 ml-2 transition-all`;
+            btnAll.onclick = () => {
+                data.forEach(d => window.selectedMonths.add(d.mes));
+                generateMonthFilters(window.appData);
+                updateDashboard();
+            };
+            container.appendChild(btnAll);
+        }
+
+        // --- 5. DASHBOARD UPDATE LOGIC ---
+        function updateDashboard() {
+            if (!window.appData || window.appData.length === 0) return;
+
+            // 1. Filtrar los datos según la selección del usuario
+            const filteredData = window.appData.filter(d => window.selectedMonths.has(d.mes));
+            
+            // 2. Actualizar las tarjetas KPI con la data filtrada
+            updateKPIs(filteredData);
+            
+            // 3. Renderizar el Gráfico principal
+            renderMainChart(filteredData);
+        }
+
+        function updateKPIs(data) {
+            let totalReal = 0, totalPlan = 0, sumMbReal = 0, sumMbPlan = 0;
+
+            data.forEach(d => {
+                totalReal += d.ventasReal;
+                totalPlan += d.pttoPlan;
+                sumMbReal += d.mbReal;
+                sumMbPlan += d.mbPlan;
+            });
+
+            const avgMbReal = data.length > 0 ? (sumMbReal / data.length) : 0;
+            const avgMbPlan = data.length > 0 ? (sumMbPlan / data.length) : 0;
+            const variacion = totalReal - totalPlan;
+            const percentVar = totalPlan > 0 ? (variacion / totalPlan) : 0;
+            const mbDif = avgMbReal - avgMbPlan;
+
+            document.getElementById('kpi-ventas-real').innerText = formatCurrency(totalReal);
+            document.getElementById('kpi-ptto-plan').innerText = formatCurrency(totalPlan);
+            document.getElementById('kpi-mb-real').innerText = formatPercent(avgMbReal);
+            document.getElementById('kpi-variacion').innerText = formatCurrency(variacion);
+
+            const varEl = document.getElementById('kpi-ventas-var');
+            const varContainer = document.getElementById('kpi-ventas-var-container');
+            
+            if (percentVar >= 0) {
+                varContainer.innerHTML = `<i class="ph-bold ph-trend-up text-brand-green"></i><span class="text-brand-green font-medium">${formatPercent(percentVar)} vs Plan</span>`;
+            } else {
+                varContainer.innerHTML = `<i class="ph-bold ph-trend-down text-red-500"></i><span class="text-red-500 font-medium">${formatPercent(percentVar)} vs Plan</span>`;
+            }
+
+            const mbDifEl = document.getElementById('kpi-mb-dif');
+            if (mbDif >= 0) {
+                mbDifEl.innerHTML = `Dif: <span class="text-brand-green font-medium">+${formatPercent(mbDif)}</span>`;
+            } else {
+                mbDifEl.innerHTML = `Dif: <span class="text-red-500 font-medium">${formatPercent(mbDif)}</span>`;
+            }
+
+            const now = new Date();
+            document.getElementById('lastUpdateText').innerText = `Actualizado: ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
+
+        function renderMainChart(data) {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#9CA3AF' : '#6B7280';
+            const gridColor = isDark ? '#374151' : '#E5E7EB';
+            const yellowColor = '#FACC15'; // Histórico
+            const orangeColor = '#F59E0B'; // Proyección
+            const blueColor = '#0F2C59';   // PTTO
+            const greenColor = '#10B981';  // MB
+
+            const categories = data.map(d => d.mes);
+            
+            // Preparar serie de Columnas (Ventas Real) con colores dinámicos
+            const ventasData = data.map(d => {
+                return {
+                    x: d.mes,
+                    y: d.ventasReal,
+                    fillColor: d.isProjection ? orangeColor : yellowColor,
+                    strokeColor: isDark ? '#1F2937' : '#fff'
+                };
+            });
+
+            const pttoData = data.map(d => d.pttoPlan);
+            const mbData = data.map(d => Number((d.mbReal * 100).toFixed(2)));
+
+            // Preparar Anotaciones para los picos (Comentarios resumidos)
+            const annotationsPoints = [];
+            data.forEach((d) => {
+                if (d.ventasReal > d.pttoPlan && d.comentarios && d.comentarios.trim() !== '') {
+                    let summary = d.comentarios.trim();
+                    if (summary.length > 40) {
+                        summary = summary.substring(0, 40) + '...';
+                    }
+                    
+                    annotationsPoints.push({
+                        x: d.mes,
+                        y: d.ventasReal,
+                        marker: {
+                            size: 7,
+                            fillColor: '#fff',
+                            strokeColor: greenColor,
+                            strokeWidth: 3,
+                            radius: 2
+                        },
+                        label: {
+                            borderColor: greenColor,
+                            offsetY: -15,
+                            style: {
+                                color: isDark ? '#fff' : '#0F2C59',
+                                background: isDark ? '#064E3B' : '#D1FAE5', // Verde muy claro / oscuro
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                cssClass: 'shadow-md rounded-md border border-green-500/30',
+                                padding: { left: 8, right: 8, top: 4, bottom: 4 }
+                            },
+                            text: summary
+                        }
+                    });
+                }
+            });
+
+            const options = {
+                series: [
+                    {
+                        name: 'Ventas Real (Ejecutado)',
+                        type: 'column',
+                        data: ventasData
+                    },
+                    {
+                        name: 'PTTO Plan',
+                        type: 'line',
+                        data: pttoData
+                    },
+                    {
+                        name: 'Margen Bruto (MB)',
+                        type: 'line',
+                        data: mbData
+                    }
+                ],
+                chart: {
+                    height: '100%',
+                    type: 'line',
+                    toolbar: { show: false },
+                    fontFamily: 'Inter, sans-serif',
+                    background: 'transparent'
+                },
+                stroke: {
+                    width: [0, 3, 3], // 0 for column, 3 for lines
+                    curve: ['straight', 'smooth', 'smooth'],
+                    dashArray: [0, 4, 0] // PTTO line as dashed
+                },
+                plotOptions: {
+                    bar: {
+                        columnWidth: '40%',
+                        borderRadius: 4
+                    }
+                },
+                colors: [yellowColor, blueColor, greenColor],
+                dataLabels: {
+                    enabled: true,
+                    enabledOnSeries: [2], // Solo mostrar etiquetas en la serie MB (índice 2)
+                    formatter: function (val) {
+                        return val + "%";
+                    },
+                    style: {
+                        fontSize: '10px',
+                        colors: [isDark ? '#fff' : '#064E3B']
+                    },
+                    background: {
+                        enabled: true,
+                        foreColor: isDark ? '#064E3B' : '#fff',
+                        padding: 4,
+                        borderRadius: 2,
+                        borderWidth: 1,
+                        borderColor: greenColor,
+                    }
+                },
+                xaxis: {
+                    categories: categories,
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    labels: { style: { colors: textColor, fontWeight: 500 } }
+                },
+                yaxis: [
+                    {
+                        // Eje Y para Ventas y PTTO (Izquierda)
+                        title: { text: 'Ingresos (COP)', style: { color: textColor, fontWeight: 600 } },
+                        labels: {
+                            style: { colors: textColor },
+                            formatter: (val) => '$' + (val / 1000000).toFixed(0) + 'M'
+                        },
+                        min: 0
+                    },
+                    {
+                        // Dummy axis to bind PTTO to the same scale as Ventas
+                        show: false,
+                        min: 0
+                    },
+                    {
+                        // Eje Y para Margen Bruto (Derecha)
+                        opposite: true,
+                        title: { text: 'Margen Bruto (%)', style: { color: greenColor, fontWeight: 600 } },
+                        labels: {
+                            style: { colors: greenColor, fontWeight: 600 },
+                            formatter: (val) => val.toFixed(1) + '%'
+                        },
+                        min: 0,
+                        max: 100 // Opcional, pero mantiene el MB visualmente equilibrado
+                    }
+                ],
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4,
+                    padding: { top: 10, right: 10, bottom: 0, left: 10 }
+                },
+                annotations: {
+                    points: annotationsPoints
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'center',
+                    labels: { colors: textColor },
+                    markers: { radius: 12 }
+                },
+                tooltip: {
+                    shared: true,
+                    intersect: false,
+                    theme: isDark ? 'dark' : 'light',
+                    y: [
+                        { formatter: (val) => formatCurrency(val) },
+                        { formatter: (val) => formatCurrency(val) },
+                        { formatter: (val) => val.toFixed(2) + '%' }
+                    ],
+                    custom: function({series, seriesIndex, dataPointIndex, w}) {
+                        const row = data[dataPointIndex];
+                        const valVentas = series[0][dataPointIndex];
+                        const valPtto = series[1][dataPointIndex];
+                        const valMb = series[2][dataPointIndex];
+                        const isPositivePeak = valVentas > valPtto;
+
+                        let html = `
+                            <div class="p-4" style="min-width: 250px; max-width: 320px;">
+                                <div class="font-bold text-gray-800 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-gray-700 uppercase text-xs flex justify-between items-center">
+                                    <span>${row.mes}</span>
+                                    ${row.isProjection ? '<span class="bg-brand-orange text-white px-2 py-0.5 rounded text-[9px]">PROYECCIÓN</span>' : ''}
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                            <span class="w-2.5 h-2.5 rounded-sm inline-block" style="background: ${row.isProjection ? orangeColor : yellowColor}"></span>
+                                            Ventas Real
+                                        </span>
+                                        <span class="font-bold text-gray-900 dark:text-white">${formatCurrency(valVentas)}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                            <span class="w-2.5 h-0.5 rounded-sm inline-block bg-brand-blue"></span>
+                                            PTTO Plan
+                                        </span>
+                                        <span class="font-semibold text-gray-700 dark:text-gray-300">${formatCurrency(valPtto)}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm pt-1 border-t border-gray-100 dark:border-gray-700/50">
+                                        <span class="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                            <span class="w-2.5 h-2.5 rounded-full inline-block bg-brand-green"></span>
+                                            Margen Bruto
+                                        </span>
+                                        <span class="font-bold text-brand-green">${valMb}%</span>
+                                    </div>
+                                </div>
+                        `;
+
+                        // Comentario completo si lo hay
+                        if (row.comentarios && row.comentarios.trim() !== '') {
+                            html += `
+                                <div class="mt-4 pt-3 text-xs ${isPositivePeak ? 'text-brand-green bg-green-50 dark:bg-green-900/20' : 'text-gray-500 bg-gray-50 dark:bg-gray-800'} p-2 rounded border border-gray-100 dark:border-gray-700 font-medium leading-relaxed">
+                                    <i class="ph-fill ph-chat-text mr-1"></i> ${row.comentarios}
+                                </div>
+                            `;
+                        }
+                        
+                        html += `</div>`;
+                        return html;
+                    }
+                }
+            };
+
+            if (mainChart) {
+                mainChart.updateOptions(options, true, false, false);
+            } else {
+                mainChart = new ApexCharts(document.querySelector("#chart-main"), options);
+                mainChart.render();
+            }
+        }
+
+        async function initApp() {
+            const refreshIcon = document.querySelector('#refreshDataBtn i');
+            refreshIcon.classList.add('animate-spin');
+
+            const rawData = await loadData();
+            
+            // Lógica de Proyección Automática (Detectar los últimos 3 meses del set de datos total)
+            const totalRecords = rawData.length;
+            rawData.forEach((row, index) => {
+                row.isProjection = index >= (totalRecords - 3);
+            });
+
+            window.appData = rawData;
+            
+            // Generar botones de filtro y lanzar la primera renderización
+            generateMonthFilters(window.appData);
+            
+            setTimeout(() => {
+                refreshIcon.classList.remove('animate-spin');
+            }, 500);
+        }
+
+        // --- 6. EVENT LISTENERS ---
+        document.getElementById('refreshDataBtn').addEventListener('click', initApp);
+        
+        // Auto refresh cada 5 min
+        setInterval(initApp, 300000);
+
+        // Run on load
+        document.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
